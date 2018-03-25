@@ -142,3 +142,5 @@ tags
 
 
 # End of https://www.gitignore.io/api/vim,macos,python
+#
+test.db

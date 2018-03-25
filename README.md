@@ -17,11 +17,14 @@ Bonus points for creative additional features or functionality.
 # Stack
 
 For my solution, the stack consists of:
-* Python3
 * Flask
 * SQLite
 
 ## Installation
+Prerequisites:
+* Python3
+* virtualenv
+
 The following bash command(s) are used for setting up the project:
 ```bash
 ./init.sh
