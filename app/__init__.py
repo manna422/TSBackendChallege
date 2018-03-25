@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -22,3 +22,13 @@ class LocationRecord(db.Model):
     latitude = db.Column(db.Float, nullable=False)
     elevation = db.Column(db.Integer, nullable=False)
 
+
+@app.route('/location', methods=['GET', 'POST', 'DELETE', 'PATCH'])
+def location():
+    print(request.method)
+    data = request.get_json(force=True)
+    print(data)
+    return jsonify({'task': data}), 201
+
+
+app.run()
