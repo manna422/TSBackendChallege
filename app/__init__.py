@@ -8,7 +8,7 @@ db = SQLAlchemy(app)
 
 
 class Aircraft(db.Model):
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, nullable=False, unique=True)
     description = db.Column(db.String(80), unique=True, nullable=False)
 
     def __repr__(self):
@@ -23,12 +23,76 @@ class LocationRecord(db.Model):
     elevation = db.Column(db.Integer, nullable=False)
 
 
+@app.route('/aircraft', methods=['GET', 'POST', 'DELETE', 'PATCH'])
+def aircraft():
+    data = request.get_json(force=True)
+    current_id = data.get('id', None)
+    current_description = data.get('description', None)
+
+    if request.method == 'GET':
+        if (current_id):
+            return jsonify({'aircrafts': {x.id:x.description for x in Aircraft.query.filter_by(id=current_id)}})
+        else:
+            return jsonify({'aircrafts': {x.id:x.description for x in Aircraft.query.all()}})
+
+
+    if request.method == 'POST':
+        if (current_id) and (current_description):
+
+            new_aircraft = Aircraft(
+                id=current_id,
+                description=current_description
+            )
+
+            db.session.add(new_aircraft)
+            db.session.commit()
+
+        else:
+            return jsonify({'error':'invalid args'}), 400
+
+
+    if request.method == 'DELETE':
+        if current_id:
+            Aircraft.query.filter(Aircraft.id == current_id).delete()
+            db.session.commit()
+        else:
+            return jsonify({'error':'invalid args'}), 400
+
+
+    if request.method == 'PATCH':
+        if (current_id) and (current_description):
+
+            new_aircraft = Aircraft(
+                id=current_id,
+                description=current_description
+            )
+
+            Aircraft.query.filter(Aircraft.id == current_id).delete()
+            db.session.add(new_aircraft)
+            db.session.commit()
+
+        else:
+            return jsonify({'error':'invalid args'}), 400
+
+
+    return jsonify({'status': 'success'}), 201
+
+
 @app.route('/location', methods=['GET', 'POST', 'DELETE', 'PATCH'])
 def location():
-    print(request.method)
     data = request.get_json(force=True)
+
+    # if request.method == 'POST':
+
+
+
+    print(request.method)
     print(data)
     return jsonify({'task': data}), 201
 
 
-app.run()
+
+if __name__ == '__main__':
+    # db.drop_all()
+    # db.create_all()
+    app.run()
