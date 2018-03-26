@@ -1,6 +1,9 @@
+from datetime import datetime
+from dateutil import parser as dateparser
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
+PAGINATION_LIMIT = 100
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/nmanna/workspace/TSBackendChallenge/test.db'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
@@ -75,20 +78,101 @@ def aircraft():
             return jsonify({'error':'invalid args'}), 400
 
 
-    return jsonify({'status': 'success'}), 201
+    return jsonify({'status': 'success', 'action': request.method, 'data':data}), 201
 
 
-@app.route('/location', methods=['GET', 'POST', 'DELETE', 'PATCH'])
+@app.route('/location', methods=['GET'])
+def location_get():
+    data = request.get_json(force=True)
+    page_number = data.get('page_number', 1)
+
+    results = LocationRecord.query.filter(LocationRecord.id == 1).paginate(
+        page_number,
+        PAGINATION_LIMIT,
+        error_out=False
+    ).items
+
+    print('******')
+    print(results)
+    print('******')
+
+
+@app.route('/location', methods=['POST', 'DELETE', 'PATCH'])
 def location():
     data = request.get_json(force=True)
 
-    # if request.method == 'POST':
+    current_id = data.get('id', None)
+    current_datetime = data.get('datetime', None)
+    current_longitude = data.get('longitude', None)
+    current_latitude = data.get('latitude', None)
+    current_elevation = data.get('elevation', None)
+
+    # convert timestring to datetime object
+    if current_datetime:
+        current_datetime = dateparser.parse(current_datetime)
 
 
+    if request.method == 'POST':
+        if all([
+            current_id,
+            current_datetime,
+            current_longitude,
+            current_latitude,
+            current_elevation
+        ]):
+            new_location_record = LocationRecord(
+                id=current_id,
+                datetime=current_datetime,
+                longitude=current_longitude,
+                latitude=current_latitude,
+                elevation=current_elevation
+            )
 
-    print(request.method)
-    print(data)
-    return jsonify({'task': data}), 201
+            db.session.add(new_location_record)
+            db.session.commit()
+
+        else:
+            return jsonify({'error':'invalid args'}), 400
+
+    if request.method == 'DELETE':
+        if (current_id) and (current_datetime):
+            LocationRecord.query.filter(
+                (LocationRecord.id == current_id) and (LocationRecord.datetime == current_datetime)
+            ).delete()
+
+            db.session.commit()
+
+        else:
+            return jsonify({'error':'invalid args'}), 400
+
+
+    if request.method == 'PATCH':
+        if all([
+            current_id,
+            current_datetime,
+            current_longitude,
+            current_latitude,
+            current_elevation
+        ]):
+            new_location_record = LocationRecord(
+                id=current_id,
+                datetime=current_datetime,
+                longitude=current_longitude,
+                latitude=current_latitude,
+                elevation=current_elevation
+            )
+
+            LocationRecord.query.filter(
+                (LocationRecord.id == current_id) and (LocationRecord.datetime == current_datetime)
+            ).delete()
+
+            db.session.add(new_location_record)
+            db.session.commit()
+
+        else:
+            return jsonify({'error':'invalid args'}), 400
+
+    return jsonify({'status': 'success', 'action': request.method, 'data':data}), 201
 
 
 
