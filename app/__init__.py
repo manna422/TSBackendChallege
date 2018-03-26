@@ -93,12 +93,36 @@ def aircraft():
 def location_get():
     results = []
     data = request.get_json(force=True)
+    print(data)
 
     # default to first results page
     page_number = data.get('page_number', 1)
-    query_filters = data.get('filters')
+    query_filters = data.get('filters', [])
 
+    supported_filter_keys = ['id', 'datetime', 'longitude', 'latitude', 'elevation']
+    supported_comparitors = {
+        'eq': lambda x,y: x==y,
+        'ne': lambda x,y: x!=y,
+        'gt': lambda x,y: x>y,
+        'ge': lambda x,y: x>=y,
+        'lt': lambda x,y: x<y,
+        'le': lambda x,y: x<=y,
+    }
     filter_args = []
+
+    for criteria in query_filters:
+        if len(criteria) != 3:
+            return jsonify({'error':'invalid filter args'}), 400
+
+        key, comparitor, value = criteria
+        if (key not in supported_filter_keys) or (comparitor not in supported_comparitors):
+            return jsonify({'error':'invalid filter args'}), 400
+
+        filter_args.append(supported_comparitors[comparitor](
+            LocationRecord.__dict__[key],
+            value
+        ))
+
 
     # compounding list of filters using the reduce operator
     compounded_query = reduce(lambda x,y: x.filter(y), filter_args, LocationRecord.query)
