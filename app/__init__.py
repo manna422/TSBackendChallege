@@ -5,7 +5,7 @@ from dateutil import parser as dateparser
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
-PAGINATION_LIMIT = 1
+PAGINATION_LIMIT = 25
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/nmanna/workspace/TSBackendChallenge/test.db'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
@@ -213,6 +213,4 @@ def location():
 
 
 if __name__ == '__main__':
-    db.drop_all()
-    db.create_all()
     app.run()
