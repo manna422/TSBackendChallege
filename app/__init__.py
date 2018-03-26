@@ -1,9 +1,11 @@
 from datetime import datetime
+from functools import reduce
+
 from dateutil import parser as dateparser
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
-PAGINATION_LIMIT = 100
+PAGINATION_LIMIT = 1
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/nmanna/workspace/TSBackendChallenge/test.db'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
@@ -18,12 +20,14 @@ class Aircraft(db.Model):
         return '{!s} - {!r}'.format(self.id, self.description)
 
 
+
 class LocationRecord(db.Model):
     id = db.Column(db.Integer, db.ForeignKey('aircraft.id'), primary_key=True, nullable=False)
     datetime = db.Column(db.DateTime, primary_key=True, nullable=False)
     longitude = db.Column(db.Float, nullable=False)
     latitude = db.Column(db.Float, nullable=False)
     elevation = db.Column(db.Integer, nullable=False)
+
 
 
 @app.route('/aircraft', methods=['GET', 'POST', 'DELETE', 'PATCH'])
@@ -34,7 +38,10 @@ def aircraft():
 
     if request.method == 'GET':
         if (current_id):
-            return jsonify({'aircrafts': {x.id:x.description for x in Aircraft.query.filter_by(id=current_id)}})
+            return jsonify({'aircrafts': {
+                x.id:x.description for x in Aircraft.query.filter_by(id=current_id)
+            }})
+
         else:
             return jsonify({'aircrafts': {x.id:x.description for x in Aircraft.query.all()}})
 
@@ -81,20 +88,48 @@ def aircraft():
     return jsonify({'status': 'success', 'action': request.method, 'data':data}), 201
 
 
+
 @app.route('/location', methods=['GET'])
 def location_get():
+    results = []
     data = request.get_json(force=True)
-    page_number = data.get('page_number', 1)
 
-    results = LocationRecord.query.filter(LocationRecord.id == 1).paginate(
+    # default to first results page
+    page_number = data.get('page_number', 1)
+    query_filters = data.get('filters')
+
+    filter_args = []
+
+    # compounding list of filters using the reduce operator
+    compounded_query = reduce(lambda x,y: x.filter(y), filter_args, LocationRecord.query)
+    paginated_results = compounded_query.paginate(
         page_number,
         PAGINATION_LIMIT,
         error_out=False
-    ).items
+    )
 
-    print('******')
-    print(results)
-    print('******')
+    results = [
+        {
+            'id': item.id,
+            'datetime': datetime.isoformat(item.datetime),
+            'longitude': item.longitude,
+            'latitude': item.latitude,
+            'elevation': item.elevation
+        }
+        for item in paginated_results.items
+    ]
+
+    return jsonify({
+        'status': 'success',
+        'action': request.method,
+        'query':data,
+        'results': results,
+        'page_current': page_number,
+        'page_total': paginated_results.pages
+    }), 201
+
+    return jsonify({'status': 'success', 'action': request.method, 'data':data}), 201
+
 
 
 @app.route('/location', methods=['POST', 'DELETE', 'PATCH'])
@@ -133,6 +168,7 @@ def location():
 
         else:
             return jsonify({'error':'invalid args'}), 400
+
 
     if request.method == 'DELETE':
         if (current_id) and (current_datetime):
@@ -177,6 +213,6 @@ def location():
 
 
 if __name__ == '__main__':
-    # db.drop_all()
-    # db.create_all()
+    db.drop_all()
+    db.create_all()
     app.run()
