@@ -242,6 +242,12 @@ def location():
     return jsonify({'status': 'success', 'action': request.method, 'data':data}), 201
 
 
+@app.route('/reset')
+def reset_databases():
+    db.drop_all()
+    db.create_all()
+    return "Resetting DB..."
+
 
 if __name__ == '__main__':
     app.run()
