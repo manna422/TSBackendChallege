@@ -4,6 +4,7 @@ from functools import reduce
 from dateutil import parser as dateparser
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 
 PAGINATION_LIMIT = 25
 app = Flask(__name__)
@@ -54,8 +55,11 @@ def aircraft():
                 description=current_description
             )
 
-            db.session.add(new_aircraft)
-            db.session.commit()
+            try:
+                db.session.add(new_aircraft)
+                db.session.commit()
+            except IntegrityError as e:
+                return jsonify({'error':'conflicting entry'}), 412
 
         else:
             return jsonify({'error':'invalid args'}), 400
@@ -187,8 +191,11 @@ def location():
                 elevation=current_elevation
             )
 
-            db.session.add(new_location_record)
-            db.session.commit()
+            try:
+                db.session.add(new_location_record)
+                db.session.commit()
+            except IntegrityError as e:
+                return jsonify({'error':'conflicting entry'}), 412
 
         else:
             return jsonify({'error':'invalid args'}), 400
