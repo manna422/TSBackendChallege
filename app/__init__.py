@@ -97,13 +97,13 @@ def aircraft():
 def location_get():
     results = []
     data = request.get_json(force=True)
-    print(data)
 
     # default to first results page
     page_number = data.get('page_number', 1)
     query_filters = data.get('filters', [])
+    sort_criterion = data.get('sort', [])
 
-    supported_filter_keys = ['id', 'datetime', 'longitude', 'latitude', 'elevation']
+    suported_keys = ['id', 'datetime', 'longitude', 'latitude', 'elevation']
     supported_comparitors = {
         'eq': lambda x,y: x==y,
         'ne': lambda x,y: x!=y,
@@ -112,14 +112,17 @@ def location_get():
         'lt': lambda x,y: x<y,
         'le': lambda x,y: x<=y,
     }
+    supported_sort_directions = ['asc', 'desc']
+
     filter_args = []
+    sort_args = []
 
     for criteria in query_filters:
         if len(criteria) != 3:
             return jsonify({'error':'invalid filter args'}), 400
 
         key, comparitor, value = criteria
-        if (key not in supported_filter_keys) or (comparitor not in supported_comparitors):
+        if (key not in suported_keys) or (comparitor not in supported_comparitors):
             return jsonify({'error':'invalid filter args'}), 400
 
         filter_args.append(supported_comparitors[comparitor](
@@ -129,8 +132,25 @@ def location_get():
 
 
     # compounding list of filters using the reduce operator
-    compounded_query = reduce(lambda x,y: x.filter(y), filter_args, LocationRecord.query)
-    paginated_results = compounded_query.paginate(
+    filtered_query = reduce(lambda x,y: x.filter(y), filter_args, LocationRecord.query)
+
+
+    for criteria in sort_criterion:
+        if len(criteria) != 2:
+            return jsonify({'error':'invalid sorting args'}), 400
+
+        key, direction = criteria
+        if (key not in suported_keys) or (direction not in supported_sort_directions):
+            return jsonify({'error':'invalid sorting args'}), 400
+
+        sort_args.append('{!s} {!s}'.format(key, direction))
+
+
+    # sorting data using reduce to concatenate requirements
+    sorted_filtered_query = reduce(lambda x,y: x.order_by(y), sort_args, filtered_query)
+
+
+    paginated_results = sorted_filtered_query.paginate(
         page_number,
         PAGINATION_LIMIT,
         error_out=False
