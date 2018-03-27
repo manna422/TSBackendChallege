@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
-PAGINATION_LIMIT = 25
+DEFAULT_PAGINATION_LIMIT = 25
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/nmanna/workspace/TSBackendChallenge/test.db'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
@@ -152,7 +152,7 @@ def location_get():
 
     paginated_results = sorted_filtered_query.paginate(
         page_number,
-        PAGINATION_LIMIT,
+        data.get('page_limit', DEFAULT_PAGINATION_LIMIT),
         error_out=False
     )
 
