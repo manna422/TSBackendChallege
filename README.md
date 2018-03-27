@@ -19,16 +19,117 @@ Bonus points for creative additional features or functionality.
 For my solution, the stack consists of:
 * Flask
 * SQLite
+* SQLAlchemy
 
 ## Installation
 Prerequisites:
 * Python3
 * virtualenv
+* pip
 
 The following bash command(s) are used for setting up the project:
 ```bash
-./init.sh
+cd <repo root directory>
+make clean # optional, if first install
+make install
+make run # runs server
 ```
+
+In a second terminal
+```bash
+cd <repo root directory>
+./load_test_data.sh # inits DB and CURLS initial values
+```
+
+# Design Decisions
+* Two tables are used for representing the data. To avoid repeatedly fetching aircraft description.
+
+```
+* denotes primary (compound) key
+
++-------------+     +------------------+
+|  AIRCRAFT   |     | LOCATIONRECORD   |   
++-------------+     +------------------+
+| * ID        |<--->| * Aircraft ID    |   
+| DESCRIPTION |     | * Datetime       |   
++-------------+     | Longitude        |   
+                    | Latitude         |   
+                    | Elevation        |   
+                    +------------------+
+```
+* JSON messages are used for sending data. To make parsing messages and routes more reusable.
+* SQLAlchemy used as driver for DB.
+  1. SQLAlchemy gives Django like ORM.
+  2. SQLAlchemy allows for easy swapping between SQL DB.
+* SQLite used for ease of deployment, and quick debugging. Driver allows for easy swapping to PostgreSQL.
+* Primary key for LocationRecord table is a compound key of Aircraft ID and Timestamp. It seems like a logical decision to have a one entry per time per aircraft. Some of the data provided contains multiple entries that share the same time and craft ID. By design, the `POST` method will drop add conflicts like this, but the `PATCH` method will override existing entries. 
+* For "Bonus points for creative additional features or functionality." The following bit started as a novel idea, but I ended up really liking the design of the dynamic filter/sort:
+
+```Python
+@app.route('/location', methods=['GET'])
+def location_get():
+
+  # ...
+
+  # supported arguments for sorting and filtering
+  suported_keys = ['id', 'datetime', 'longitude', 'latitude', 'elevation']
+  supported_comparitors = {
+      'eq': lambda x,y: x==y,
+      'ne': lambda x,y: x!=y,
+      'gt': lambda x,y: x>y,
+      'ge': lambda x,y: x>=y,
+      'lt': lambda x,y: x<y,
+      'le': lambda x,y: x<=y,
+  }   
+  supported_sort_directions = ['asc', 'desc']
+
+  filter_args = []
+  sort_args = []
+
+  for criteria in query_filters:
+      if len(criteria) != 3:
+          return jsonify({'error':'invalid filter args'}), 400
+
+      key, comparitor, value = criteria
+      if (key not in suported_keys) or (comparitor not in supported_comparitors):
+          return jsonify({'error':'invalid filter args'}), 400
+
+      filter_args.append(supported_comparitors[comparitor](
+          LocationRecord.__dict__[key],
+          value
+      ))  
+
+
+  # compounding list of filters using the reduce operator
+  filtered_query = reduce(lambda x,y: x.filter(y), filter_args, LocationRecord.query)
+
+
+  for criteria in sort_criterion:
+      if len(criteria) != 2:
+          return jsonify({'error':'invalid sorting args'}), 400
+
+      key, direction = criteria
+      if (key not in suported_keys) or (direction not in supported_sort_directions):
+          return jsonify({'error':'invalid sorting args'}), 400
+
+      sort_args.append('{!s} {!s}'.format(key, direction))
+
+
+  # sorting data using reduce to concatenate requirements
+  sorted_filtered_query = reduce(lambda x,y: x.order_by(y), sort_args, filtered_query)
+
+
+
+  # ...
+```
+
+## TODO for more longterm production service:
+* Implement Test Cases, using a combination of `pytest` testing framework and the `requests` library, or similar.
+* Add support for multiple configurations: Development vs Deployment
+* Authentication with flask plugin
+* Include Dockerfile
+* Handle each incoming JSON KEY, eg: parse timestamps for validity with regex
+
 
 # API
 
