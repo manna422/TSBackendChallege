@@ -6,12 +6,16 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
+
+# APP, DB INITIALIZATION
+
 DEFAULT_PAGINATION_LIMIT = 25
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/nmanna/workspace/TSBackendChallenge/test.db'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
 db = SQLAlchemy(app)
 
+
+# MODEL DECLATAION
 
 class Aircraft(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False, unique=True)
@@ -19,7 +23,6 @@ class Aircraft(db.Model):
 
     def __repr__(self):
         return '{!s} - {!r}'.format(self.id, self.description)
-
 
 
 class LocationRecord(db.Model):
@@ -30,10 +33,15 @@ class LocationRecord(db.Model):
     elevation = db.Column(db.Integer, nullable=False)
 
 
+# ROUTE DECLATAION
 
 @app.route('/aircraft', methods=['GET', 'POST', 'DELETE', 'PATCH'])
 def aircraft():
+    '''
+    Handle insertion, update, delete and query of aircraft description data
+    '''
     data = request.get_json(force=True)
+
     current_id = data.get('id', None)
     current_description = data.get('description', None)
 
@@ -55,6 +63,7 @@ def aircraft():
                 description=current_description
             )
 
+            # handle conflicting entries
             try:
                 db.session.add(new_aircraft)
                 db.session.commit()
@@ -81,6 +90,7 @@ def aircraft():
                 description=current_description
             )
 
+            # delete old entries if they exist and replace with new ones
             Aircraft.query.filter(Aircraft.id == current_id).delete()
             db.session.add(new_aircraft)
             db.session.commit()
@@ -103,6 +113,7 @@ def location_get():
     query_filters = data.get('filters', [])
     sort_criterion = data.get('sort', [])
 
+    # supported arguments for sorting and filtering
     suported_keys = ['id', 'datetime', 'longitude', 'latitude', 'elevation']
     supported_comparitors = {
         'eq': lambda x,y: x==y,
@@ -184,6 +195,7 @@ def location_get():
 def location():
     data = request.get_json(force=True)
 
+    # grab keys
     current_id = data.get('id', None)
     current_datetime = data.get('datetime', None)
     current_longitude = data.get('longitude', None)
@@ -211,6 +223,7 @@ def location():
                 elevation=current_elevation
             )
 
+            # handle conflicting entries
             try:
                 db.session.add(new_location_record)
                 db.session.commit()
@@ -249,6 +262,7 @@ def location():
                 elevation=current_elevation
             )
 
+            # delete old entries if they exist and replace with new ones
             LocationRecord.query.filter(
                 (LocationRecord.id == current_id) and (LocationRecord.datetime == current_datetime)
             ).delete()
@@ -264,10 +278,10 @@ def location():
 
 @app.route('/reset')
 def reset_databases():
+    '''
+    Purely for debugging
+    '''
     db.drop_all()
     db.create_all()
     return "Resetting DB..."
 
-
-if __name__ == '__main__':
-    app.run()
