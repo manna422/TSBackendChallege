@@ -11,6 +11,9 @@ curl -i -H "Content-Type: application/json" -X POST -d '{"id":3, "description":"
 curl -i -H "Content-Type: application/json" -X POST -d '{"id":4, "description":"Art Boom 6500"}' ${HOST_ADDRESS}/aircraft
 
 
+echo "Initializing DB..."
+curl ${HOST_ADDRESS}/reset
+
 echo "Inputting Location Record Information..."
 curl -i -H "Content-Type: application/json" -X POST -d '{"id":1, "datetime":"2016-10-12T12:00:00-05:00", "longitude":43.2583264, "latitude":-81.8149807, "elevation":500}' ${HOST_ADDRESS}/location
 curl -i -H "Content-Type: application/json" -X POST -d '{"id":1, "datetime":"2016-10-13T12:00:00-05:00", "longitude":42.559112 , "latitude":-79.286693 , "elevation":550}' ${HOST_ADDRESS}/location

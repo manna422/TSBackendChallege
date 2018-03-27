@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 DEFAULT_PAGINATION_LIMIT = 25
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
